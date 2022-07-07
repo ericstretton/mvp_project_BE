@@ -4,26 +4,22 @@ from helpers.data_functions import *
 from helpers.db_helpers import run_query
 
 
+@app.get('/api/task')
 
-@app.get('/api/project')
-
-def project_get():
+def task_get():
     
     return
 
 
-@app.post('/api/project')
+@app.post('/api/task')
 
-def project_post():
+def task_post():
     
     return
 
 
+@app.patch('/api/task')
 
-@app.patch('/api/project')
-
-def project_patch():
+def task_patch():
     
     return
-
-
