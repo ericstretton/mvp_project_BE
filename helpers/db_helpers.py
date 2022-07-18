@@ -32,8 +32,8 @@ def disconnect_db(conn, cursor):
         conn.close()
     
 # main db query 
-
-def run_query(statement, args=None):
+# Change to args=[]
+def run_query(statement, args=[]):
     
     try:
         (conn, cursor) = connect_db()

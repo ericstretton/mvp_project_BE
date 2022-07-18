@@ -1,4 +1,4 @@
-import json
+
 from app import app
 from flask import jsonify, request
 from helpers.db_helpers import run_query
@@ -20,14 +20,17 @@ def user_session_post():
             return jsonify('ERROR, not a valid email'), 400
         
         valid_email = run_query('SELECT email FROM user WHERE email=?', [email])
+        validity_response = valid_email[0][0]
         
-        if valid_email == email:
+        
+        if validity_response == email:
             
             user_password = run_query('SELECT password FROM user WHERE email=?', [email])
+            valid_password = user_password[0][0]
             
-            if bcrypt.checkpw(str(password).encode(), str(user_password.encode())):
+            if bcrypt.checkpw(str(password).encode(), str(valid_password).encode()):
                 user_id = run_query('SELECT id FROM user WHERE email=?', [email])
-                token = uuid4()
+                token = str(uuid4())
                 
                 resp = []
                 for id in user_id:
@@ -35,8 +38,8 @@ def user_session_post():
                     userId = id[0]
                     resp.append(userId)
                     resp.append(token)
-                    
-                run_query('INSERT INTO user_session(user_id, token) VALUES(?,?)', [user_id[0], token])
+                
+                run_query('INSERT INTO user_session(user_id, token) VALUES(?,?)', [user_id[0][0], token])
                 
                 return jsonify(resp), 201
             else:
@@ -50,14 +53,14 @@ def user_session_post():
 @app.delete('/api/user_session')
 
 def user_session_delete():
-    data = request.json
+    params = request.args
     
-    if len(data.keys()) == 1 and {'token'} <=data.keys():
-        token = data.get('token')
+    if len(params.keys()) == 1 and {'token'} <=params.keys():
+        token = params.get('token')
     
         token_valid = run_query('SELECT token FROM user_session WHERE token=?', [token])
         
-        if token_valid == token:
+        if token_valid[0][0] == token:
             run_query('DELETE FROM user_session WHERE token=?', [token])
             return jsonify('Log-out Successful'), 201
         else:
