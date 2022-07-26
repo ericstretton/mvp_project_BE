@@ -10,6 +10,9 @@ from helpers.db_helpers import run_query
 
 def company_get():
     # takes the parameters of a login session token - query for the company_id - the get request displays the company information for that user
+    
+    # TODO:Data base needs to have a reference company_projects table where multiple projects can be associated to one company. 
+    
     params = request.args
     token = request.headers.get('token')
     

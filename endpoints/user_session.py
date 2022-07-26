@@ -32,12 +32,9 @@ def user_session_post():
                 user_id = run_query('SELECT id FROM user WHERE email=?', [email])
                 token = str(uuid4())
                 
-                resp = []
-                for id in user_id:
-                    userId = {}
-                    userId = id[0]
-                    resp.append(userId)
-                    resp.append(token)
+                resp = populate_login_data(user_id[0])
+                resp['sessionToken'] = token
+                
                 
                 run_query('INSERT INTO user_session(user_id, token) VALUES(?,?)', [user_id[0][0], token])
                 

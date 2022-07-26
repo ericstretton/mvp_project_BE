@@ -61,7 +61,7 @@ def project_post():
         return jsonify('ERROR, invalid amount of submitted keys'), 400
     
     # Required keys to have are: name, estimated_completion_date, project_manager
-    # Additional accepted keys are: description, initial_budget, current_budget
+    # Additional accepted keys are: description
     
     if 'name' in new_project:
         if not check_length(new_project['name'], 1, 75):
@@ -158,6 +158,6 @@ def project_patch():
     project = populate_project_dict(request_updated_project[0])
     list_updated_project.append(project)
 
-    return jsonify('New Project Created,', list_updated_project[0]), 201
+    return jsonify('Project Successfully Updated,', list_updated_project[0]), 201
 
 

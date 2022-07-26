@@ -1,6 +1,6 @@
 
 from app import app
-from flask import jsonify, request, Response
+from flask import jsonify, request
 from helpers.data_functions import *
 from helpers.db_helpers import run_query
 import bcrypt
@@ -157,6 +157,7 @@ def user_post():
         return jsonify('ERROR, title is required to create a new user')
     
     
+    
     # use cross reference to convert the authorization level to its digit identifier
     
     auth_level_num = run_query('SELECT id FROM authorization WHERE level=?', [new_user['authorization']])
@@ -178,7 +179,7 @@ def user_post():
 
 def user_patch():
     #employees can update their password only
-    # project_managers can update employee information, except the password and can update their own passowrd
+    # project_managers can update employee information, except the password and can update their own password
     # org_owners can update employee and project_managers info, except the passwords and can update any of their information
     
     data = request.json
@@ -196,7 +197,7 @@ def user_patch():
         return jsonify('Invalid token submitted'), 400
     
     if auth_level == 'employee':
-        check_user = run_query('SELECT user_id FROM user WHERE user_id=? and token=? ', [user_id, token])
+        check_user = run_query('SELECT user_id FROM user_session WHERE user_id=? and token=? ', [user_id, token])
         
         if check_user[0][0] != int(user_id):
             return jsonify('ERROR, user not authorized to update this profile'), 400
@@ -229,15 +230,112 @@ def user_patch():
                 return jsonify('ERROR, a new password must be sent for and a password update.')
         else:
             return jsonify('ERROR, invalid keys submitted')
-    return
+        
+    elif auth_level == 'proj_man':
+        
+        
+        # a project_manager can update their password firstly
+        
+        
+        if len(data.keys()) == 3 and {'token', 'user_id', 'password'} <= data.keys():
+            
+            check_user = run_query('SELECT user_id FROM user_session WHERE user_id=? and token=? ', [user_id, token])
+            if check_user[0][0] != int(user_id):
+                return jsonify('ERROR, user not authorized to update this profile'), 400
+            
+            user_update = new_dictionary_request(data)
+            
+            if 'password' in user_update:
+                
+                #TODO: apply check to see if new password matches old password - this is not allowed
+                
+                if not check_length(user_update['password'], 6, 75):
+                    return jsonify('ERROR, password must be between 6 and 75 characters'), 400
+        
+                password = user_update['password']
+                salt = bcrypt.gensalt()
+                hash_pass = bcrypt.hashpw(str(password).encode(), salt)
 
+                run_query('UPDATE user SET password=? WHERE id=?', [hash_pass, user_id])
+                
+                get_updated_user = run_query('SELECT id, email, firstName, lastName, pictureURL, authorization, title, employee_start_date FROM user WHERE id=?', [user_id])
+                
+                user_info = []
+                info = populate_user_dict(get_updated_user[0])
+                user_info.append(info)
+                
+                return jsonify(user_info[0]), 400
+            else:
+                return jsonify('ERROR, a new password must be sent for and a password update.')
+        
+        #otherwise a project manager can update a user in their company and they can update that users email, firstName, lastName, pictureURL and title
+        elif len(data.keys()) >= 3 and len(data.keys()) <= 7:
+            user_update = new_dictionary_request(data)
 
+            if 'email' in user_update:
+                if not check_email(user_update['email']):
+                    return jsonify('ERROR, invalid email address submitted')
+                if not check_length(user_update['email'], 1, 75):
+                    return jsonify('ERROR, email must be between 1 and 75 characters'), 400
+                
+                email_exists = run_query('SELECT email FROM user WHERE email=?', [user_update['email']])
+                if email_exists[0][0] == user_update['email']:
+                    return jsonify('ERROR, email already exists in the system.'), 400
+                
+        else:
+            return jsonify('ERROR, Invalid amount of keys submitted'), 400
+            
+    elif auth_level == 'org_owner':
+    
+        if len(data.keys()) == 3 and {'token', 'user_id', 'password'} <= data.keys():
 
+            check_user = run_query('SELECT user_id FROM user_session WHERE user_id=? and token=? ', [user_id, token])
+        
+            if check_user[0][0] != int(user_id):
+                return jsonify('ERROR, user not authorized to update this profile'), 400
+            
+            
+            
+            
+            
+            
 @app.delete('/api/user')
 
 def user_delete():
     #org_owners and project_managers cannot be deleted
     # employees and can be deleted - all other fields they are in must be deleted as well
     
+    data = request.json
+    token = data.get('token')
+    user_id = data.get('user_id')
     
-    return
+    if user_id != None:
+        if str(user_id).isdigit() == False:
+            return jsonify('ERROR, user_id has to be a valid identifying number in the database'), 400
+    else:
+        return jsonify('ERROR, a user_id is required for user deletion'), 400
+    
+    check_user_id = run_query('SELECT id FROM user WHERE id=?', [int(user_id)])
+    if check_user_id[0][0] != int(user_id):
+        return jsonify('ERROR, user_id not found'), 400
+    
+    auth_level = get_authorization(token)
+    if auth_level == 'invalid':
+        return jsonify('ERROR, token is invalid'), 400
+    
+    if auth_level == 'employee':
+        return jsonify('ERROR, user is not authorized for user deletion'), 401
+    
+    user_id_auth = run_query('SELECT authorization FROM user WHERE id=?', [user_id])
+    
+    if (auth_level == 'org_owner' or auth_level == 'proj_man') and (user_id_auth[0][0] == 'org_man' or user_id_auth[0][0] == 'proj_man'):
+        return jsonify('ERROR, org_owners and proj_managers cannot be deleted')
+    
+    
+    # The user must then be logged out
+    run_query('DELETE  FROM user_session WHERE user_id=?', [user_id])
+    
+    
+    run_query('DELETE  FROM user WHERE id=?', [user_id])
+    return jsonify('User deleted'), 204
+    

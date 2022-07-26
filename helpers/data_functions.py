@@ -6,7 +6,7 @@ from helpers.db_helpers import run_query
 
 def get_authorization(token):
     token_valid = run_query("SELECT token FROM user_session WHERE token=?", [token])
-    validity_response = token_valid[0][0]
+    validity_response = token_valid[0][-1]
     if validity_response == token:
         auth_level = run_query("SELECT authorization FROM user INNER JOIN user_session ON user.id = user_session.user_id WHERE token=?", [token])
         level_name = run_query('SELECT level FROM authorization INNER JOIN user ON authorization.id = user.authorization WHERE authorization.id=?', [auth_level[0][0]])
@@ -26,7 +26,13 @@ def populate_user_dict(data):
         "title" : data[6],
         "employee_start_date" : data[7]
     }
-    return user
+    return  user
+
+def populate_login_data(data):
+    user_login = {
+        "id" : data[0]
+     }
+    return user_login
     
     
 def populate_company_dict(data):
@@ -53,6 +59,17 @@ def populate_project_dict(data):
         "statusId" : data[6]
     }
     return project
+
+def populate_task_dict(data):
+    task = {
+        "task_id" : data[0],
+        "name" : data[1],
+        "instructions" : data[2],
+        "status_id" : data[3],
+        "user_id" : data[4],
+        "project_id" : data[5]
+    }
+    return task
 
 
 

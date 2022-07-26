@@ -1,3 +1,4 @@
+from flask import jsonify
 from dbcreds import *
 import mariadb
 
@@ -81,3 +82,6 @@ def run_query(statement, args=[]):
         print(e.msg)
     finally:
         disconnect_db(conn,cursor)
+        
+        
+        
